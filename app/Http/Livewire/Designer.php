@@ -17,6 +17,8 @@ class Designer extends Component
     public ?int $subcategoryId = null;
     public ?int $productId = null;
 
+    public bool $completed = false;
+
     protected $listeners = [
         'frontendReady' => 'loadPlt',
         'print' => 'sendToPrint',
@@ -43,6 +45,7 @@ class Designer extends Component
     {
         $this->subcategoryId = null;
         $this->productId = null;
+        $this->completed = false;
     }
 
     // STEP 1
@@ -102,6 +105,8 @@ class Designer extends Component
         $design->user()->associate($this->userId);
         $design->file = $filePath;
         $design->save();
+
+        $this->completed = true;
     }
 
     public function getEmojis(): array

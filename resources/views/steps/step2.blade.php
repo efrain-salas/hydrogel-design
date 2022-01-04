@@ -1,4 +1,4 @@
-<div x-data="{ showEmojis: false }" x-show="$wire.productId">
+<div x-data="{ showEmojis: false }" x-show="$wire.productId && !$wire.completed">
     <div id="toolbar" class="px-2 pt-4 pb-1 select-none">
         <div id="bt-add-image" class="relative inline-block bg-red-700 hover:bg-red-600 px-2 py-0 rounded-lg font-regular text-white text-lg cursor-pointer">
             <svg xmlns="http://www.w3.org/2000/svg" class="inline align-middle h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
