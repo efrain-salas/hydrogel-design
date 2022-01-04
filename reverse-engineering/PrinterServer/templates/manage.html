@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta http-equiv="refresh" content="30">
+    <link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <title>Management Page</title>
+    <style>
+        .black_overlay{ 
+            display: none; 
+            position: absolute; 
+            top: 0%; 
+            left: 0%; 
+            width: 100%; 
+            height: 100%; 
+            background-color: black; 
+            z-index:1001; 
+            -moz-opacity: 0.8; 
+            opacity:.80; 
+            filter: alpha(opacity=88); 
+        } 
+        .white_content { 
+            display: none; 
+            position: absolute; 
+            top: 25%; 
+            /* left: 25%;  */
+            width: 90%; 
+            height: 50%; 
+            padding: 20px; 
+            border: 10px solid orange; 
+            background-color: white; 
+            z-index:1002; 
+            overflow: auto; 
+        } 
+    </style>
+    <script>
+        function btnClick(id){
+            $.ajax({
+                url:"/photo/confirm",
+                data:{
+                    print_id:id
+                },
+				type:'POST',
+				crossDomain:true,
+				success: function(data) {
+                    location.reload();
+		        },
+		        error: function(jqXHR, textStatus, errorThrown) {
+		            console.log(textStatus + ' ' + errorThrown);
+		        }
+            });
+        }
+
+        function change_pwd(){
+            document.getElementById('pwd_light').style.display='block';
+            document.getElementById('pwd_fade').style.display='block';
+        }
+
+        function commit_pwd(username){
+            var old_pwd = document.getElementById('old_pwd').value;
+            var new_pwd = document.getElementById('new_pwd').value;
+            var confir_pwd = document.getElementById('confirm_pwd').value;
+            if(new_pwd != confir_pwd){
+                alert('The two new passwords are inconsistent');
+                return;
+            }
+            $.ajax({
+                url:"/change_pwd",
+                data:{
+                    name:username,
+                    old_pwd:old_pwd,
+                    new_pwd:new_pwd
+                },
+				type:'POST',
+				crossDomain:true,
+				success: function(data) {
+                    var json = JSON.parse(data);
+                    if(json['ret'] == 0)
+                        alert("Change Password Success");
+                    else
+                        alert("Change Password Failed "+json['info']);
+                    cancel_pwd();
+		        },
+		        error: function(jqXHR, textStatus, errorThrown) {
+		            console.log(textStatus + ' ' + errorThrown);
+		        }
+            });
+        }
+
+        function cancel_pwd(){
+            document.getElementById('pwd_light').style.display='none';
+            document.getElementById('pwd_fade').style.display='none';
+        }
+
+        window.onload = function() {
+            $.ajax({
+                url:"/manage/print_mode",
+                data:{
+                    
+                },
+				type:'POST',
+				crossDomain:true,
+				success: function(data) {
+                    console.log(data);
+                    if(data>=1 && data<=2) {
+                        document.getElementById('sel_print_mode').selectedIndex = data-1;
+                    }
+		        },
+		        error: function(jqXHR, textStatus, errorThrown) {
+		            console.log(textStatus + ' ' + errorThrown);
+		        }
+            });
+        }
+
+        function select_mode() {
+            var mode = document.getElementById('sel_print_mode').selectedIndex+1;
+            $.ajax({
+                url:"/manage/change_mode",
+                data:{
+                    mode:mode
+                },
+				type:'POST',
+				crossDomain:true,
+				success: function(data) {
+                    
+		        },
+		        error: function(jqXHR, textStatus, errorThrown) {
+		            console.log(textStatus + ' ' + errorThrown);
+		        }
+            });
+        }
+    </script>
+</head>
+<body>
+    <div>
+        <button style="margin:10px;" onclick="change_pwd()">Change Password</button>
+        <label>     Print Mode</label>
+        <select id='sel_print_mode' style="width: 180px;height: 30px;margin: 5px;" onchange="select_mode()">
+            <option>user print automatic</option>
+            <option>manager print manual</option>
+        </select>
+        <div style="float:right;margin:10px;">
+            {% if current_user.id %}
+                <a href="{{url_for('logout')}}">Logout {{ current_user.id }}</a>
+            {% else %}
+                <a href="{{url_for('login')}}">Login</a>
+            {% endif %}                    
+        </div>
+    </div>
+
+    <div id="pwd_light" class="white_content"> 
+        <label style="display:inline-block;width:80px;margin: 10px;">Old Password：</label>
+        <input id='old_pwd' type="password" placeholder="Old Password" required="required"/><br><br>
+        <label style="display:inline-block;width:80px;margin: 10px;">New Password：</label>
+        <input id='new_pwd' type="password" placeholder="New Password" required="required"/><br><br>
+        <label style="display:inline-block;width:80px;margin: 10px;">Confirm Password：</label>
+        <input id='confirm_pwd' type="password" placeholder="Confirm Password" required="required"/><br><br>
+        <button onclick='commit_pwd("{{current_user.id}}")' style="margin-left: 20px;">Submit</button> 
+        <button style="margin-left: 150px;" onclick="cancel_pwd()">Cancel</button>
+    </div> 
+    <div id="pwd_fade" class="black_overlay"></div>
+    
+    <table border="1" rules="all" text-align:center" style="margin:10px;">
+        <tr>
+            <th>ID</th>
+            <th>Number</th>
+            <th>Width</th>
+            <th>Height</th>
+            <th>Image</th>
+            <th>State</th>
+            <th>Create Time</th>
+            <th>Update Time</th>
+            <th>Operate</th>
+        </tr>
+
+        {% for item in listPrinter %}
+            <tr >
+                <td style="width:80px;margin:10px;"> {{item[0]}} </td>
+                <td style="width:80px;margin:5px;"> {{item[1]}} </td>
+                <td style="width:80px;margin:5px;"> {{item[2]}} </td>
+                <td style="width:80px;margin:5px;"> {{item[3]}} </td>
+                <td >
+                    <img src='{{item[4]}}' style="width:120px;height:150px"></td>
+                </td>
+                <td style="width:80px;margin:5px;"> 
+                    {% if item[5] == '0' %}
+                        Unprinted
+                    {% else %}
+                        Printed
+                    {% endif %}
+                </td>
+                <td style="width:150px;margin:5px;"> {{item[6]}} </td>
+                <td style="width:150px;margin:5px;"> {{item[7]}} </td>
+                <td style="width:120px;margin:5px;" align="center" valign="middle">
+                    {% if item[5] == '0' %}
+                        <button onclick="btnClick({{item[0]}})">Print</button>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
+

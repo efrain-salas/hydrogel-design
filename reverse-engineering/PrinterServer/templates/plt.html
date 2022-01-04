@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1">
+    <title>Upload</title>
+    <script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
+    <script language="javascript">
+        function procLine(line){
+            var i = 0;
+            var signZ = 1;
+
+            while(line[i]<'0' || line[i]>'9'){
+                if(line[i] == 'U'){
+                    signZ = 0;
+                }
+                i++;
+            }
+            if(i == line.length)
+                return NaN;
+            line = line.substr(i,line.length-i);
+            var strs = line.split(',');
+            var axis_x = parseInt(strs[0]);
+            var axis_y = parseInt(strs[1]);
+            if(isNaN(axis_x) || isNaN(axis_y))
+                return NaN;
+            return {x:axis_x,y:axis_y,z:signZ};
+        }
+        function handleFiles(files) {
+            var file = files[0];
+            var reader = new FileReader();
+            var canvas = document.getElementById('canvas');
+            var context=canvas.getContext("2d");
+            context.beginPath();
+            context.rect(0,0,canvas.width,canvas.height);
+            context.stroke();
+
+            reader.onload = function() 
+            {
+                var line = "";
+                var comma = 0;
+                var points = [];
+                
+                for(var i=0;i<this.result.length;i++)
+                {
+                    var ch = this.result[i];
+                    if(ch == ';'){
+                        var point = procLine(line);
+                        if(point)
+                            points.push(point);
+                        line = "";
+                        comma = 0;
+                    }else{
+                        line += this.result[i];
+                        if(ch == ',' || ch==' '){
+                            comma++;
+                        }
+                        if(comma == 2) {
+                            var point = procLine(line);
+                            if(point)
+                                points.push(point);
+                            comma = 0;
+                            line = "";
+                        }
+                    }
+                }
+
+                var max_x = points[0].x;
+                var max_y = points[0].y;
+                var min_x = points[0].x;
+                var min_y = points[0].y;
+                for(var i=0;i<points.length;i++){
+                    if(points[i].x>max_x)
+                        max_x = points[i].x;
+                    if(points[i].y>max_y)
+                        max_y = points[i].y;
+                    if(points[i].x<min_x)
+                        min_x = points[i].x;
+                    if(points[i].y<min_y)
+                        min_y = points[i].y;
+                }
+
+                var width = (max_x-min_x)/40;
+                var height = (max_y-min_y)/40;
+                var ratio = 3;
+                var canvas_width = width*ratio+50;
+                var canvas_height = height*ratio+50;
+                document.getElementById('width').value = width;
+                document.getElementById('height').value = height;
+                canvas.width = canvas_width;
+                canvas.height = canvas_height;
+                //context.translate(min_x*ratio/40,min_y*ratio/40);
+                context.beginPath();
+                for(var i=0;i<points.length;i++){
+                    if(points[i].z)
+                        context.lineTo(width*ratio+25-(points[i].x-min_x)*ratio/40,(points[i].y-min_y)*ratio/40);
+                    else
+                        context.moveTo(width*ratio+25-(points[i].x-min_x)*ratio/40,(points[i].y-min_y)*ratio/40);
+                }
+                context.stroke();
+                
+            }
+            reader.readAsText(file);
+        }
+
+        function width_input(){
+            var img = document.getElementById("img1");
+            img.width = form1.width.value*2;  
+        }
+
+        function height_input(){
+            var img = document.getElementById("img1");
+            img.height = form1.height.value*2;
+        }
+
+        function num(obj){
+            if(obj.value=='0.00'){
+                obj.value = '';
+            }
+            obj.value = obj.value.replace(/[^\d.]/g,"");
+            obj.value = obj.value.replace(/^\./g,"");
+            obj.value = obj.value.replace(/\.{2,}/g,".");
+            obj.value = obj.value.replace(".","$#$").replace(/\./g,"").replace("$#$",".");
+            obj.value = obj.value.replace(/^(\-)*(\d+)\.(\d\d).*$/,'$1$2.$3');
+        }
+
+        function selectSize(){
+            var select = document.getElementById("select");
+            var width = document.getElementById("width");
+            var height = document.getElementById("height");
+            console.log(select.selectedIndex);
+            if(select.selectedIndex == 0){
+               width.disabled = false; 
+               height.disabled = false; 
+            }else{
+                width.disabled = true;
+                height.disabled = true; 
+                switch(select.selectedIndex)
+                {
+                case 1:
+                    width.value = 100;
+                    height.value = 100;
+                    break;
+                case 2:
+                    width.value = 200;
+                    height.value = 200;
+                    break;
+                case 3:
+                    width.value = 300;
+                    height.value = 300;
+                    break;
+                case 4:
+                    width.value = 400;
+                    height.value = 400;
+                    break;
+                case 5:
+                    width.value = 500;
+                    height.value = 500;
+                    break;
+                case 6:
+                    width.value = 600;
+                    height.value = 600;
+                    break;
+                default:
+                    width.value = 100;
+                    height.value = 100;
+                    break;
+                }
+
+                var img = document.getElementById("img1");
+                img.width = width.value;
+                img.height = height.value;
+            }
+        }
+
+        // $('.form1').on('submit',function(e){
+        //     console.log('submit now');
+        //     e.preventDefault();
+        // });
+
+        var start_flag = false;
+        function work(){
+            $.get("/progress",function(data){
+            var value = parseInt(data);
+            if(start_flag)
+            {
+                start_flag = false;
+                value = 0;
+            }    
+            document.getElementById("progress").value = parseInt(value);
+            if(value<100)
+                setTimeout(work, 1000) 
+            });
+        }
+        function submitclick(){
+            var file = form1.file.value;
+            if(file == ""){
+                alert('请选择plt文件');
+                return;
+            }
+            var index = file.lastIndexOf(".");
+            var suffix = file.substring(index+1);
+            if(suffix != "plt"){
+                alert('请选择plt格式文件');
+                return;
+            }
+            document.getElementById('pro_div').style.display = "";
+            var progress = document.getElementById("progress");
+            progress.value = 0;
+            start_flag = true;
+            work();
+        }
+        </script>
+</head>
+<a href="/">返回Index页面</a> <br>
+<h3>请上传PLT文件</h3>
+<iframe  name="iframe" style="display:none;"> </iframe>
+<form action="" method=post enctype=multipart/form-data id='form1' target="iframe">
+    <input type=file name=file id='input' onchange="handleFiles(this.files)" style="margin-bottom:10px;margin-right: 20px;">
+    <button type=submit onclick="submitclick()">切割文件</button><br>
+    <label style="display:inline-block;width:80px;"> 串口: </label>
+    <select name="com" id="com" style="width: 220px">
+        {%for item in coms%}
+            <option value="{{item}}">{{item}}</option>
+        {% endfor %}
+    </select> <br>
+    <label style="display:inline-block;width:80px;"> 波特率: </label>
+    <select name="boderate" id="boderate" style="width: 220px">
+        <option value="9600">9600</option>
+        <option value="19200">19200</option>
+        <option value="38400" selected="true">38400</option>
+        <option value="57600">57600</option>
+        <option value="115200">115200</option>
+    </select> <br>
+    <label style="display:inline-block;width:80px;"> 宽   : </label>
+    <INPUT type="text" style="width:180px" name="width" id="width" value="100" oninput="width_input()" onkeyup="value=value.replace(/[^\d]/g,'').replace(/^0{1,}/g,'')"> mm<br>
+    <label style="display:inline-block;width:80px;"> 高   : </label>
+    <INPUT type="text" style="width:180px" name="height" id="height" value="120" oninput="height_input()" onkeyup="value=value.replace(/[^\d]/g,'').replace(/^0{1,}/g,'')"> mm<br><br>
+    <canvas id="canvas"></canvas><br><br>
+    <div id=pro_div style="display:none;">
+        切割进度：<progress id="progress" value="0" max="100" style="width: 300px;"></progress><br>
+    </div>
+    
+</form>
+
+
+

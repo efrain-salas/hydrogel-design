@@ -1,0 +1,82 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ko" lang="ko">
+<head>
+<title>Javascript 二维码生成库：QRCode</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+<script type="text/javascript" src="//cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
+<script type="text/javascript" src="//static.runoob.com/assets/qrcode/qrcode.min.js"></script>
+</head>
+<body>
+<h1>环盛智能科技公司打印服务页面</h1>
+<a href="/photo/upload">点击跳到打印页面</a> <br>
+<input id="print_url" type="text" value="http://192.168.10.184:5000/photo/upload" style="width:400px" />
+<button onclick="makePrintCode()">生成打印二维码</button><br />
+<div id="print_qrcode" style="width:100px; height:100px; margin-top:15px;"></div> <br><br>
+<script type="text/javascript">
+var print_qrcode = new QRCode(document.getElementById("print_qrcode"), {
+	width : 100,
+	height : 100
+});
+
+function makePrintCode () {		
+	var elText = document.getElementById("print_url");
+	
+	if (!elText.value) {
+		alert("请输入打印页面url");
+		elText.focus();
+		return;
+	}
+	
+	print_qrcode.makeCode(elText.value);
+}
+
+makePrintCode();
+
+$("#print_url").
+	on("blur", function () {
+		makePrintCode();
+	}).
+	on("keydown", function (e) {
+		if (e.keyCode == 13) {
+			makePrintCode();
+		}
+	});
+</script>
+
+<!-- <a href="/plt/upload">点击跳到切割页面</a> <br>
+<input id="cut_url" type="text" value="http://192.168.10.184:5000/plt/upload" style="width:400px" />
+<button onclick="makeCutCode()">生成切割二维码</button><br />
+<div id="cut_qrcode" style="width:100px; height:100px; margin-top:15px;"></div>
+<script type="text/javascript">
+    var cut_qrcode = new QRCode(document.getElementById("cut_qrcode"), {
+        width : 100,
+        height : 100
+    });
+    
+    function makeCutCode () {		
+        var cutUrl = document.getElementById("cut_url");
+        
+        if (!cutUrl.value) {
+            alert("请输入打印页面url");
+            cutUrl.focus();
+            return;
+        }
+        
+        cut_qrcode.makeCode(cutUrl.value);
+    }
+    
+    makeCutCode();
+    
+    $("#cut_url").
+        on("blur", function () {
+            makeCutCode();
+        }).
+        on("keydown", function (e) {
+            if (e.keyCode == 13) {
+                makeCutCode();
+            }
+        });
+    </script>
+</body> -->
+</html>

@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1">
+    <title>Customize & Submit Print Photo</title>
+    <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+    <script type="text/javascript" src="../static/js/hammer.min.js"></script>
+    <script type="text/javascript" src="../static/js/mobile-detect.min.js"></script>
+    <!--<script src="https://cdn.bootcss.com/crypto-js/3.1.9-1/crypto-js.min.js"></script>-->
+    <script type="text/javascript" src="https://static.runoob.com/assets/qrcode/qrcode.min.js"></script>
+    <style> 
+        .black_overlay{ 
+            display: none; 
+            position: absolute; 
+            top: 0%; 
+            left: 0%; 
+            width: 100%; 
+            height: 100%; 
+            background-color: black; 
+            z-index:1001; 
+            -moz-opacity: 0.8; 
+            opacity:.80; 
+            filter: alpha(opacity=88); 
+        } 
+        .white_content { 
+            display: none; 
+            position: absolute; 
+            top: 25%; 
+            /* left: 25%;  */
+            width: 90%; 
+            height: 50%; 
+            padding: 20px; 
+            border: 10px solid orange; 
+            background-color: white; 
+            z-index:1002; 
+        } 
+        .ui_button {
+                display: inline-block;
+                line-height: 37px;
+                padding: 0 10px;
+                color: white;
+                font-family: "微软雅黑";
+                font-weight: 300;
+                cursor: pointer;
+                border: 1px solid #222;
+             }
+        .ui_button_primary {
+            background-color: rgba(91, 56, 218, 0.911);
+        }
+        label.ui_button:hover {
+            background-color:#AAA;
+        }
+
+        .button {
+            color: white;
+            background-color: rgba(91, 56, 218, 0.911);
+            cursor: pointer;
+        }
+        .button:hover{
+            background-color:#AAA;
+        }
+        .div_net_type li.select {
+            background: #006633;
+        }
+    </style> 
+    <script>
+        var width_phone;
+        var height_phone;
+        var sel_img_url = '';
+        var font_family = 'Arial';
+        var font_color = '#000000';
+        var print_size = {width:119,height:185};
+        var zoom_ratio = 4;
+
+        function handImage(url) {
+            var canvas = document.getElementById("canvas2");
+            ctx = canvas.getContext("2d");
+            ctx.globalAlpha = 0.8;
+            var img = new Image();
+            img.src = url;
+            var scale = 1;
+            var degree = 0;
+            var text = "";
+            var textScale = 1;
+            var textDegree = 0;
+            var isMouseDown = false;
+            var mousePrePos = {x:0,y:0};
+            var ratio = 3;
+            var offset = 20*ratio;
+            var client_width = print_size.width*ratio-offset;
+            var client_height = print_size.height*ratio;
+            var center_pos = {x:canvas.width/2,y:canvas.height/2};
+            var textPos = {x:50,y:50};
+
+            function min(x,y) {
+                return x<y ? x :y;
+            }
+
+            function max(x,y) {
+                return x>y?x:y;
+            }
+            
+            img.onload =function(){
+                degree = 0;
+                center_pos = {x:canvas.width/2,y:canvas.height/2};
+                mousePrePos = {x:0,y:0};
+                var width_ratio = width_phone*zoom_ratio/img.width;
+                var height_ratio = height_phone*zoom_ratio/img.height;
+                scale = width_ratio>height_ratio?height_ratio:width_ratio;
+                draw();
+            }
+
+            $("#restoreBtn").click(function () {
+                degree = 0;
+                center_pos = {x:canvas.width/2,y:canvas.height/2};
+                mousePrePos = {x:0,y:0};
+                var width_ratio = width_phone/img.width;
+                var height_ratio = height_phone/img.height;
+                scale = width_ratio>height_ratio?height_ratio:width_ratio;
+                textScale = 1;
+                textDegree = 0;
+                draw();
+            });
+
+            $("#rotateBtn").click(function () {
+                if(moveText) {
+                    textDegree += 30;
+                    textDegree %= 360;
+                } else {
+                    degree += 30;
+                    degree %= 360;
+                }
+                
+                draw();
+            });
+            
+            $("#scaleUpBtn").click(function () {
+                if(moveText)
+                    textScale = 1.2*textScale;
+                else
+                    scale = 1.2*scale;
+                draw();
+            });
+
+            $("#scaleDnBtn").click(function () {
+                if(moveText)
+                    textScale = textScale/1.2;
+                else
+                scale = scale/1.2;
+                draw();
+            });
+
+            $("#text_close").click(function (){
+                document.getElementById('text_light').style.display='none';
+                document.getElementById('text_fade').style.display='none';
+                text = document.getElementById('text_input').value;
+                draw();
+            });
+
+            //$("#btnText").attr('disabled',true);
+            //document.getElementById('btnText').disabled = false;
+
+            function getPointOnCanvas(canvas, e) {
+                var rect = canvas.getBoundingClientRect();
+                x = (e.clientX - rect.left) * canvas.width / rect.width;
+                y = (e.clientY - rect.top ) * canvas.height / rect.height;
+                if(x<10)
+                    x = 10;
+                else if(x>canvas.width-10)
+                    x = canvas.width-10;
+                if(y<10)
+                    y = 10;
+                else if(y>canvas.height-10)
+                    y = canvas.height-10;
+                return { x: x,  y: y};
+            }
+
+            // var hammer = new Hammer.Manager(canvas);
+            // var pan = new Hammer.Pan({ threshold: 10});
+            // var rotate = new Hammer.Rotate({ threshold: 0 });
+            // var pinch = new Hammer.Pinch({ threshold: 0 });
+            // hammer.add([pan,rotate]); 
+            // //pan.recognizeWith([rotate,pinch]);
+            // pan.requireFailure(rotate);
+            // rotate.requireFailure(pan);
+            var hammer = new Hammer(canvas);
+            var pre_center_pos;
+            var moveText = false;
+            hammer.on("panstart",function(e){
+                isMouseDown = true;
+                var pos = getPointOnCanvas(canvas,e.pointers[0]);
+                pre_center_pos = {x:center_pos.x,y:center_pos.y};
+                var flag = ctx.isPointInPath(pos.x,pos.y);
+                if(flag){
+                    moveText = true;
+                    isMouseDown = false;
+                } else {
+                    moveText = false;
+                }
+            });
+
+            hammer.on("panmove",function(e){
+                var mousePos = getPointOnCanvas(canvas,e.pointers[0]); 
+                if(moveText) {
+                    textPos = mousePos;
+                }
+                else if(isMouseDown){
+                    center_pos.x = e.deltaX+pre_center_pos.x;
+                    center_pos.y = e.deltaY+pre_center_pos.y;
+                }
+                if(isMouseDown || moveText)
+                    draw();
+            });
+
+            hammer.on("panend",function(e){
+                //moveText = false;
+                isMouseDown = false;
+            });
+
+            var prescale;
+            var preTextScale;
+            hammer.get('pinch').set({
+                enable: true
+            });
+            hammer.on("pinchstart",function(e){
+                if(moveText)
+                    preTextScale = textScale;
+                else
+                    prescale = scale;
+            });
+            hammer.on("pinch",function(e){
+                if(moveText)
+                    textScale = e.scale*preTextScale;
+                else
+                    scale = e.scale*prescale;
+                draw();
+            });
+
+            var predegree = degree;
+            var prerotatio;
+            var preTextDegree = textDegree;
+            var preTextRotatio;
+            hammer.get('rotate').set({
+                enable: true
+            });
+            hammer.on('rotatestart',function(e){
+                if(moveText) {
+                    preTextDegree = textDegree;
+                    preTextRotatio = e.rotation;
+                } else {
+                    predegree = degree;
+                    prerotatio = e.rotation;
+                }
+            });
+            hammer.on('rotatemove',function(e){
+                if(moveText) {
+                    textDegree = (preTextDegree+e.rotation-preTextRotatio)%360;
+                } else {
+                    degree = (predegree+e.rotation-prerotatio)%360;
+                } 
+                
+                draw();
+            });
+
+            hammer.on("tap",function(e){
+                var pos = getPointOnCanvas(canvas,e.pointers[0]);
+                var flag = ctx.isPointInPath(pos.x,pos.y);
+                if(flag){
+                    moveText = true;
+                    isMouseDown = false;
+                } else {
+                    moveText = false;
+                }
+            });
+
+            function draw(){
+                ctx.save();
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.translate(center_pos.x, center_pos.y);
+                ctx.rotate(degree / 180 * Math.PI);
+                ctx.translate(-center_pos.x, -center_pos.y);
+                var width = img.width*scale;
+                var height = img.height*scale;
+
+                center_pos.x = min(canvas.width+width/2-30,center_pos.x);
+                center_pos.x = max(-width/2+30,center_pos.x);
+                center_pos.y = min(canvas.height+height/2-30,center_pos.y);
+                center_pos.y = max(-height/2+30,center_pos.y);
+                ctx.drawImage(img,center_pos.x-width/2,center_pos.y-height/2,width,height);
+                ctx.restore();
+
+                var size = 16+textScale*2;
+                ctx.font = size+"px "+font_family;// 设置字体
+                ctx.fillStyle = font_color;// 设置颜色
+                ctx.textAlign = "center";// 设置水平对齐方式
+                ctx.textBaseline = "middle";// 设置垂直对齐方式
+                var textSize = ctx.measureText(text);
+                ctx.beginPath();
+                ctx.save();
+                ctx.translate(textPos.x,textPos.y);
+                ctx.rotate(textDegree/ 180 * Math.PI);
+                ctx.fillText(text, 0, 0);
+                ctx.rect(-textSize.width/2-20,-60,textSize.width+40,120);
+                ctx.restore();
+                ctx.closePath();
+            }
+        }
+
+        function handleFiles(files) {
+            var file = files[0];
+            var imageType = /^image\//;
+        
+            if ( !imageType.test(file.type) ) {
+              return;
+            }
+           
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                handImage(e.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function exportCanvasAsPNG(canvas, fileName) {
+            var MIME_TYPE = "image/png";
+            var imgURL = canvas.toDataURL(MIME_TYPE);
+            var dlLink = document.createElement('a');
+            dlLink.download = fileName;
+            dlLink.href = imgURL;
+            dlLink.dataset.downloadurl = [MIME_TYPE, dlLink.download, dlLink.href].join(':');
+            document.body.appendChild(dlLink);
+            dlLink.click();
+            document.body.removeChild(dlLink);
+        }
+
+        function submitClick(margin){
+            $.ajax({
+            type:"POST",
+            url:"/photo/print_number",
+            data:{
+               
+            },
+            success:function(data){
+                var count = parseInt(data)+1;
+                if(confirm("Your number is "+count+",Please confime to print") == false)
+                {
+                    return;
+                }
+                
+                var canvas1 = document.getElementById('canvas1');
+                var ctx1 = canvas1.getContext("2d");
+                var canvas2 = document.getElementById('canvas2');
+                //ctx1.drawImage(canvas2,60,0,canvas2.width,canvas2.height);
+                var canvas3 = document.createElement('canvas');
+                canvas3.width = canvas1.width;
+                canvas3.height = canvas1.height;
+                var offset_left = 60*zoom_ratio;
+                var offset_height = 0;
+                var ctx3 = canvas3.getContext("2d");
+
+                ctx3.fillStyle = "white";
+                ctx3.fillRect(0,0,canvas3.width,canvas3.height);
+
+                var width_edge = 20;
+                var height_total = print_size.height;
+                var width_total = print_size.width;
+                var width_box = width_total-width_edge;
+                var height_box = height_total;
+                var const_ratio = 3*zoom_ratio;
+
+                ctx3.beginPath();
+                ctx3.rect(0,0,canvas3.width,canvas3.height);
+                ctx3.stroke();
+                
+                ctx3.beginPath();
+                ctx3.setLineDash([20]);
+                ctx3.lineWidth = 6;
+                ctx3.moveTo(width_edge*const_ratio,0);
+                ctx3.lineTo(width_edge*const_ratio,width_edge*height_total);
+                ctx3.stroke();
+                ctx3.setLineDash([]);
+
+                ctx3.beginPath();
+                ctx3.moveTo(30*zoom_ratio,10*zoom_ratio);
+                ctx3.lineTo(20*zoom_ratio,30*zoom_ratio);
+                ctx3.lineTo(25*zoom_ratio,30*zoom_ratio);
+                ctx3.lineTo(25*zoom_ratio,50*zoom_ratio);
+                ctx3.lineTo(35*zoom_ratio,50*zoom_ratio);
+                ctx3.lineTo(35*zoom_ratio,30*zoom_ratio);
+                ctx3.lineTo(40*zoom_ratio,30*zoom_ratio);
+                ctx3.lineTo(30*zoom_ratio,10*zoom_ratio);
+                ctx3.fillStyle = 'black';
+                ctx3.fill();
+                ctx3.font="60px Arial";
+                ctx3.fillText('TOP',18*zoom_ratio,70*zoom_ratio);
+                ctx3.stroke();
+                ctx3.closePath();
+
+                var py = canvas3.height - 40*zoom_ratio;
+                ctx3.beginPath();
+                ctx3.moveTo(10*zoom_ratio,py+10*zoom_ratio);
+                ctx3.lineTo(30*zoom_ratio,py);
+                ctx3.lineTo(30*zoom_ratio,py+5*zoom_ratio);
+                ctx3.lineTo(50*zoom_ratio,py+5*zoom_ratio);
+                ctx3.lineTo(50*zoom_ratio,py+15*zoom_ratio);
+                ctx3.lineTo(30*zoom_ratio,py+15*zoom_ratio);
+                ctx3.lineTo(30*zoom_ratio,py+20*zoom_ratio);
+                ctx3.lineTo(10*zoom_ratio,py+10*zoom_ratio);
+
+                ctx3.fillStyle = 'black';
+                ctx3.fill();
+                ctx3.stroke();
+                ctx3.closePath();
+
+                ctx3.font = "80px bold 黑体";// 设置字体
+                ctx3.fillStyle = "black";// 设置颜色
+                ctx3.textAlign = "center";// 设置水平对齐方式
+                ctx3.textBaseline = "middle";// 设置垂直对齐方式
+                ctx3.beginPath();
+                ctx3.fillText(parseInt(data)+1, 30*zoom_ratio, canvas3.height/2);
+                ctx3.drawImage(canvas2,offset_left,offset_height,canvas2.width,canvas2.height);
+
+                var margin_x = margin['width']*3*zoom_ratio;
+                var margin_y = margin['height']*3*zoom_ratio;
+                var canvas4 = document.createElement('canvas')
+                canvas4.width = canvas3.width-2*margin_x;
+                canvas4.height = canvas3.height-2*margin_y;
+                var ctx4 = canvas4.getContext('2d');
+                ctx4.drawImage(canvas3,margin_x,margin_y,canvas4.width,canvas4.height,0,0,canvas4.width,canvas4.height);
+                //exportCanvasAsPNG(canvas4,"test.png");
+                //exportCanvasAsPNG(canvas3,"test_1.png");
+                var pic = canvas4.toDataURL("image/png");
+                $.ajax({
+                type:"POST",
+                url:"/photo/print",
+                data:{
+                    width:print_size.width,
+                    height:print_size.height,
+                    image:pic
+                    }
+                }).done(function(o){
+                    alert('submit task to printer success!');
+                });
+            }
+            });
+            
+        }
+
+        window.onload = function(){
+            if((navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i)))  {
+                document.getElementById('div_menu').style.display = "none";
+            }  
+            var fileName = localStorage.getItem('fileName');
+            //var size_item = localStorage.getItem('print_size');
+            //print_size = JSON.parse(size_item);
+            var canvas1 = document.getElementById('canvas1');
+            canvas1.width = print_size.width*3*zoom_ratio;
+            canvas1.height = print_size.height*3*zoom_ratio;
+            plot_phone(fileName);
+        };
+
+        function extname(filename){
+            if(!filename||typeof filename!='string'){
+                return false
+            };
+            let a = filename.split('').reverse().join('');
+            let b = a.substring(0,a.search(/\./)).split('').reverse().join('');
+            return b
+        };
+
+        function decryptPlt(ciphertext,key){
+            var keyHex = CryptoJS.enc.Utf8.parse(key);
+            var decrypted = CryptoJS.DES.decrypt({
+                ciphertext: CryptoJS.enc.Hex.parse(ciphertext)
+            }, keyHex, {
+                iv:keyHex,
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7
+            });
+            var result_value = decrypted.toString(CryptoJS.enc.Utf8);
+            return result_value;
+        }
+
+        function plot_phone(filename){
+            var canvas2 = document.getElementById('canvas2');
+            canvas2.width = (print_size.width*3-60)*zoom_ratio;
+            canvas2.height = print_size.height*3*zoom_ratio;
+            //console.log('width_phone:'+width_phone+",height_phone:"+height_phone);
+            var offset_left = 60*zoom_ratio;
+            var offset_height = 0;
+            canvas2.setAttribute('style',"background-color:rgba(255, 255, 255, 0);position: absolute;left:"+offset_left+"px;top:"+offset_height+"px;");
+            drawImg();
+			
+            /*$.ajax({
+				url:"/api/phone/pltfile",
+                data:{
+                    file:filename,
+                    width:print_size.width,
+                    height:print_size.height
+                },
+				type:'POST',
+				crossDomain:true,
+				success: function(data) {
+                    var json = JSON.parse(data);
+                    width_phone = json.width;
+                    height_phone = json.height;
+                    var canvas2 = document.getElementById('canvas2');
+                    canvas2.width = (print_size.width*3-60)*zoom_ratio;
+                    canvas2.height = print_size.height*3*zoom_ratio;
+                    //console.log('width_phone:'+width_phone+",height_phone:"+height_phone);
+                    var offset_left = 60*zoom_ratio;
+                    var offset_height = 0;
+                    canvas2.setAttribute('style',"background-color:rgba(255, 255, 255, 0);position: absolute;left:"+offset_left+"px;top:"+offset_height+"px;");
+                    drawImg(json.data);
+		        },
+		        error: function(jqXHR, textStatus, errorThrown) {
+		            console.log(textStatus + ' ' + errorThrown);
+		        }
+			});*/
+
+        }
+        
+        function procLine(line){
+            var i = 0;
+            var signZ = 1;
+
+            while(line[i]<'0' || line[i]>'9'){
+                if(line[i] == 'U'){
+                    signZ = 0;
+                }
+                i++;
+            }
+            if(i == line.length)
+                return NaN;
+            line = line.substr(i,line.length-i);
+            var strs = line.split(',');
+            var axis_x = parseInt(strs[0]);
+            var axis_y = parseInt(strs[1]);
+            if(isNaN(axis_x) || isNaN(axis_y))
+                return NaN;
+            return {x:axis_x,y:axis_y,z:signZ};
+        }
+
+        function drawImg(img){
+            var canvas = document.getElementById('canvas1');
+            var context = canvas.getContext("2d");
+            context.clearRect(0,0,canvas.width,canvas.height);
+            context.fillStyle = "white";
+            context.fillRect(0,0,canvas.width,canvas.height);
+
+            var width_edge = 20;
+            var height_total = print_size.height;
+            var width_total = print_size.width;
+            var width_box = width_total-width_edge;
+            var height_box = height_total;
+            var const_ratio = 3*zoom_ratio;
+
+            context.beginPath();
+            context.rect(0,0,canvas.width,canvas.height);
+            context.stroke();
+            
+            var image = new Image();
+            image.src = img;
+            image.onload = function(){
+                // width_phone = image.width;
+                // height_phone = image.height;
+                // var sx = width_edge*const_ratio+width_box*const_ratio/2-image.width/2;
+                // var sy = height_box*const_ratio/2-image.height/2;
+                context.drawImage(image,0,0,width_total*const_ratio,height_total*const_ratio);
+                context.beginPath();
+                context.setLineDash([20]);
+                context.moveTo(width_edge*const_ratio,0);
+                context.lineTo(width_edge*const_ratio,width_edge*height_total);
+                context.lineWidth = 6;
+                context.stroke();
+                context.setLineDash([]);
+
+                context.beginPath();
+                context.moveTo(30*zoom_ratio,10*zoom_ratio);
+                context.lineTo(20*zoom_ratio,30*zoom_ratio);
+                context.lineTo(25*zoom_ratio,30*zoom_ratio);
+                context.lineTo(25*zoom_ratio,50*zoom_ratio);
+                context.lineTo(35*zoom_ratio,50*zoom_ratio);
+                context.lineTo(35*zoom_ratio,30*zoom_ratio);
+                context.lineTo(40*zoom_ratio,30*zoom_ratio);
+                context.lineTo(30*zoom_ratio,10*zoom_ratio);
+                context.fillStyle = 'black';
+                context.fill();
+                context.font="80px Arial";
+                context.fillText('TOP',16*zoom_ratio,70*zoom_ratio);
+                context.stroke();
+                context.closePath();
+
+                context.beginPath();
+                var py = canvas.height - 40*zoom_ratio;
+                context.beginPath();
+                context.moveTo(10*zoom_ratio,py+10*zoom_ratio);
+                context.lineTo(30*zoom_ratio,py);
+                context.lineTo(30*zoom_ratio,py+5*zoom_ratio);
+                context.lineTo(50*zoom_ratio,py+5*zoom_ratio);
+                context.lineTo(50*zoom_ratio,py+15*zoom_ratio);
+                context.lineTo(30*zoom_ratio,py+15*zoom_ratio);
+                context.lineTo(30*zoom_ratio,py+20*zoom_ratio);
+                context.lineTo(10*zoom_ratio,py+10*zoom_ratio);
+                context.fillStyle = 'black';
+                context.fill();
+                context.stroke();
+                context.closePath();
+            }
+        }
+
+        function netPicClick() {
+            document.getElementById('net_img_light').style.display='block';
+            document.getElementById('net_img_fade').style.display='block';
+            items = document.getElementsByClassName('title_item_class');
+            items[0].style.backgroundColor = '#008888';
+            var ulObj = document.getElementById('div_net_ul');
+            $.ajax({
+				url:"/net_img_type",
+                data:{
+                    
+                },
+				type:'GET',
+				crossDomain:true,
+				success: function(data) {
+                    var json = JSON.parse(data);
+                    var images = json[0].images;
+                    var count = 0;
+                    for(var i=0;i<images.length;i++){
+                        var img_url = 'http://cloudcutter.oss-accelerate.aliyuncs.com'+images[i];
+                        var xhr = new XMLHttpRequest()
+                        xhr.open('get', img_url, true)
+                        xhr.responseType = 'blob'
+                        xhr.onload = function() {
+                            if (this.status === 200) {
+                                var blob = this.response;
+                                var fileReader = new FileReader();
+                                fileReader.onloadend = function(e) {
+                                    var result = e.target.result
+                                    var liObj = document.createElement("li");
+                                    var imgObj = document.createElement('img');
+                                    imgObj.src = result;
+                                    imgObj.height = 200;
+                                    liObj.appendChild(imgObj);
+                                    liObj.setAttribute("style","display:inline-block;padding:5px;margin:10px;list-style:none;height:40%");
+                                    liObj.setAttribute("url_text",result);
+                                    liObj.setAttribute('class','net_img_li');
+                                    ulObj.appendChild(liObj);
+                                    if(++count == images.length) {
+                                        var net_img_lis = document.getElementsByClassName('net_img_li');
+                                        for(var i=0;i<net_img_lis.length;i++) {
+                                            net_img_lis[i].onclick = function(){
+                                                sel_img_url = this.getAttribute('url_text');
+                                                $(this).css("background","#99CCFF").siblings().css("background","#ffffff"); 
+                                            }
+                                        }
+                                    }
+                                }
+                                fileReader.readAsDataURL(blob);
+                            }
+                        }
+                        xhr.onerror = function() {
+                            
+                        }
+                        xhr.send();
+                        // var liObj = document.createElement("li");
+                        // var imgObj = document.createElement('img');
+                        // imgObj.src = 'http://cloudcutter.oss-accelerate.aliyuncs.com'+images[i];
+                        // imgObj.height = 200;
+                        // imgObj.setAttribute('crossOrigin', 'anonymous');
+                        // liObj.appendChild(imgObj);
+                        // liObj.setAttribute("style","display:inline-block;padding:5px;margin:10px;list-style:none;height:40%");
+                        // //liObj.setAttribute('onclick',"netImgClick()");
+                        // liObj.setAttribute("url_text",'http://cloudcutter.oss-accelerate.aliyuncs.com'+images[i]);
+                        // liObj.setAttribute('class','net_img_li');
+                        // ulObj.appendChild(liObj);
+                        
+                    }
+                    
+		        },
+		        error: function(jqXHR, textStatus, errorThrown) {
+		            console.log(textStatus + ' ' + errorThrown);
+		        }
+			});
+        }
+
+        
+        function netImgDlgClose() {
+            document.getElementById('net_img_light').style.display='none';
+            document.getElementById('net_img_fade').style.display='none';
+            handImage(sel_img_url);    
+        }
+        
+        var font_family_arr = ['Arial','Microsoft YaHei','宋体','黑体','sans-serif','Tahoma',
+            '楷体_GB2312','华文细黑','隶书','华文彩云','华文行楷'
+        ];
+
+        var font_color_arr = ['#000000','#FF0000','#00FF00','#0000FF','#FFFF00','#FF00FF','#00FFFF',,
+        '#FFD700','#A52A2A','#16A951','#00e09e','#549688'];
+
+        function textClick(){
+            document.getElementById('text_light').style.display='block';
+            document.getElementById('text_fade').style.display='block';
+            var ulFontObj = document.getElementById('ul_font');
+            for(var i=0;i<font_family_arr.length;i++) {
+                var liObj = document.createElement('li');
+                liObj.innerHTML = 'Effect';
+                liObj.setAttribute('style','display:inline-block;margin:10px;list-style:none;font-family:'+font_family_arr[i]);
+                liObj.setAttribute('value',i);
+                liObj.setAttribute('class','font_class_li');
+                ulFontObj.appendChild(liObj);
+            }
+
+            var ulColorObj = document.getElementById('ul_color');
+            for(var i=0;i<font_color_arr.length;i++) {
+                var liObj = document.createElement('li');
+                liObj.innerHTML = 'Effect';
+                liObj.setAttribute('value',i);
+                liObj.setAttribute('class','color_class_li');
+                liObj.setAttribute('style','display:inline-block;margin:10px;list-style:none;color:'+font_color_arr[i]);
+                ulColorObj.appendChild(liObj);
+            }
+
+            var font_lis = document.getElementsByClassName('font_class_li');
+            for(var i=0;i<font_lis.length;i++) {
+                font_lis[i].onclick = function(){
+                    font_family = font_family_arr[this.getAttribute('value')];
+                    $(this).css("background","#99CCFF").siblings().css("background","#ffffff"); 
+                    document.getElementById('text_input').setAttribute('style','font-family:'+font_family+';color:'+font_color); 
+                }
+            }
+
+            var color_lis = document.getElementsByClassName('color_class_li');
+            for(var i=0;i<color_lis.length;i++) {
+                color_lis[i].onclick = function(){
+                    font_color = font_color_arr[this.getAttribute('value')];
+                    $(this).css("background","#99CCFF").siblings().css("background","#ffffff");
+                    document.getElementById('text_input').setAttribute('style','font-family:'+font_family+';color:'+font_color); 
+                }
+            }
+        }
+
+        function netTitleClick(id,images) {
+            items = document.getElementsByClassName('title_item_class');
+            for(var i=0;i<items.length;i++) {
+                if(items[i].id == id) {
+                    items[i].style.backgroundColor = '#008888';
+
+                    var ulObj = document.getElementById('div_net_ul');
+                    ulObj.innerHTML = '';
+                    var count = 0;
+                    for(var j=0;j<images.length;j++){
+                        var img_url = 'http://cloudcutter.oss-accelerate.aliyuncs.com'+images[j];
+                        var xhr = new XMLHttpRequest()
+                        xhr.open('get', img_url, true)
+                        xhr.responseType = 'blob'
+                        xhr.onload = function() {
+                            if (this.status === 200) {
+                                var blob = this.response;
+                                var fileReader = new FileReader();
+                                fileReader.onloadend = function(e) {
+                                    var result = e.target.result
+                                    var liObj = document.createElement("li");
+                                    var imgObj = document.createElement('img');
+                                    imgObj.src = result;
+                                    imgObj.height = 200;
+                                    liObj.appendChild(imgObj);
+                                    liObj.setAttribute("style","display:inline-block;padding:5px;margin:10px;list-style:none;height:40%");
+                                    liObj.setAttribute("url_text",result);
+                                    liObj.setAttribute('class','net_img_li');
+                                    ulObj.appendChild(liObj);
+                                    if(++count == images.length) {
+                                        var net_img_lis = document.getElementsByClassName('net_img_li');
+                                        for(var j=0;j<net_img_lis.length;j++) {
+                                            net_img_lis[j].onclick = function(){
+                                                sel_img_url = this.getAttribute('url_text');
+                                                $(this).css("background","#99CCFF").siblings().css("background","#ffffff"); 
+                                            }
+                                        }
+                                    }
+                                }
+                                fileReader.readAsDataURL(blob);
+                            }
+                        }
+                        xhr.onerror = function() {
+                            
+                        }
+                        xhr.send();
+                    }
+                    
+                } else {
+                    items[i].style.backgroundColor = 'white';
+                }
+            }
+        }
+
+        
+    </script>
+</head>
+<body>
+<!-- <a href="/photo/phone">返回上一页面</a> -->
+<iframe  name="iframe" style="display:none;"> </iframe>
+<div>
+    <div>
+        <form action="" enctype=multipart/form-data id='form1'  target="iframe">
+            <div style="flex-direction: row;">
+                <label class="ui_button ui_button_primary" for="xFile" style='margin-top:12px'>Local Picture</label>
+                <form><input type="file" id="xFile" style="position:absolute;clip:rect(0 0 0 0);" onchange="handleFiles(this.files)"></form>
+                <button style='margin-left: 10px;height:40px' class='button' onclick = "netPicClick()">Web Picture</button>
+               
+                
+                <button class='button' onclick="submitClick({{margin}})" style="margin-left: 10px;height:40px">Submit to Printer</button>
+            </div>
+            <div id="net_img_light" class="white_content">Select Web Picture 
+                <a href = "javascript:void(0)" onclick = "netImgDlgClose()">OK</a>
+                <div style="overflow: auto;">
+                    <ul id="div_net_type" class='tab_title' style="list-style:none;overflow: auto;">
+                        {% for item in net_img %}
+                            <li onclick='netTitleClick(this.id,{{item.images}})' id='{{item.eng}}' class='title_item_class' style="float:left;margin-left:20px;overflow: auto;"> {{item.eng}}</li>
+                        {% endfor %}
+                    </ul>
+					<div style="overflow: auto;">
+                    	<ul id="div_net_ul" style="white-space:nowrap"></ul>
+                	</div>
+                </div>
+            </div> 
+            <div id="net_img_fade" class="black_overlay"></div> 
+            
+            <div id="text_light" class="white_content"> 
+                <a href = "javascript:void(0)" id='text_close'>OK</a> <br><br>
+                <label style="margin: 10px 10px 20px 10px;">Enter Text：</label>
+                <input id='text_input' type='text'/><br><br>
+                <label style="margin: 10px;">Select Font</label><br>
+                <div style="overflow: auto;">
+                    <ul id='ul_font' style="white-space:nowrap"></ul>
+                </div>
+                <label style="margin: 10px;">Select Color</label><br>
+                <div style="overflow: auto;">
+                    <ul id='ul_color' style="white-space:nowrap"></ul>
+                </div>
+            </div> 
+            <div id="text_fade" class="black_overlay"></div> 
+            <div id="div_menu">
+                <button id="rotateBtn"  class='button' style="width: 80px;margin: 5px;">Rotate</button>
+                <button id='scaleUpBtn' class='button' style="width: 80px;margin: 5px;">Zoom In</button>
+                <button id='scaleDnBtn' class='button' style="width: 80px;margin: 5px;">Zoom Out</button>
+                <button id='restoreBtn' class='button' style="width: 80px;margin: 5px;">Restore</button>
+            </div>
+            
+        </form>
+    </div>
+    <!-- <div class="square" style="position: absolute; top:-20px;left:0px;display:flex;flex-direction: row;"> -->
+    <div style="position: relative;margin-top: 10px;zoom:0.25">
+        <canvas id="canvas1" width="376" height="572" style="background-color:rgba(255, 255, 255, 0);position: absolute;"></canvas>
+        <canvas id="canvas2" width="315" height="570" style="background-color:rgba(255, 255, 255, 0);position: absolute;left:60px"></canvas>
+    </div>
+</div>
+
+</body>
+
+
+
+
+
+
+

@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1">
+    <title>Printer setting page</title>
+    <script type="text/javascript" src={{url_for("static",filename="js/jquery.min.js")}}></script>
+    <script type="text/javascript" src={{url_for("static",filename="js/hammer.min.js")}}></script>
+    <script type="text/javascript" src={{url_for("static",filename="js/mobile-detect.min.js")}}></script>
+    <script src="https://cdn.bootcss.com/crypto-js/3.1.9-1/crypto-js.min.js"></script>
+    <script type="text/javascript" src="//static.runoob.com/assets/qrcode/qrcode.min.js"></script>
+    <link href="https://cdn.bootcss.com/select2/4.0.6-rc.1/css/select2.css" rel="stylesheet">
+    <script src="https://cdn.bootcss.com/select2/4.0.6-rc.1/js/select2.js"></script>
+    <style>
+        .link {
+            font: bold 11px Arial;
+            text-decoration: none;
+            background-color: rgba(91, 56, 218, 0.911);
+            color:white;
+            padding: 10px;
+            border-top: 1px solid #CCCCCC;
+            border-right: 1px solid #333333;
+            border-bottom: 1px solid #333333;
+            border-left: 1px solid #CCCCCC;
+        }
+        .link:hover {
+            background-color:#AAA;
+        }
+        .button {
+            color: white;
+            background-color: rgba(91, 56, 218, 0.911);
+            cursor: pointer;
+        }
+        .button:hover{
+            background-color:#AAA;
+        }
+    </style>
+    <script>
+        var width_phone;
+        var height_phone;
+        var plt_arr = new Array();
+        
+        function handleFiles(files) {
+            var canvas;
+            var ctx;
+            var file = files[0];
+            var imageType = /^image\//;
+        
+            if ( !imageType.test(file.type) ) {
+              return;
+            }
+           
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                canvas = document.getElementById("canvas2");
+                ctx = canvas.getContext("2d");
+                ctx.globalAlpha = 0.8;
+                var img = new Image();
+                img.src = e.target.result;
+                var scale = 1;
+                var degree = 0;
+                var text = "";
+                var isMouseDown = false;
+                var mousePrePos = {x:0,y:0};
+                var ratio = 3;
+                var offset = 20*ratio;
+                var client_width = 105*ratio;
+                var client_height = 190*ratio;
+                var center_pos = {x:offset+client_width/2,y:client_height/2};
+                var textPos = {x:center_pos.x-width_phone/2+50,y:center_pos.y-height_phone/2+50};
+                
+                img.onload =function(){
+                    degree = 0;
+                    center_pos = {x:client_width/2,y:client_height/2};
+                    mousePrePos = {x:0,y:0};
+                    var width_ratio = width_phone/img.width;
+                    var height_ratio = height_phone/img.height;
+                    scale = width_ratio>height_ratio?height_ratio:width_ratio;
+                    draw();
+                }
+
+                $("#restoreBtn").click(function () {
+                    degree = 0;
+                    center_pos = {x:client_width/2,y:client_height/2};
+                    mousePrePos = {x:0,y:0};
+                    var width_ratio = width_phone/img.width;
+                    var height_ratio = height_phone/img.height;
+                    scale = width_ratio>height_ratio?height_ratio:width_ratio;
+                    draw();
+                });
+
+                $("#rotateBtn").click(function () {
+                    degree += 30;
+                    degree %= 360;
+                    draw();
+                });
+                
+                $("#scaleUpBtn").click(function () {
+                    scale = 1.2*scale;
+                    draw();
+                });
+
+                $("#scaleDnBtn").click(function () {
+                    scale = scale/1.2;
+                    draw();
+                });
+
+
+                $("#textBtn").click(function () {
+                    text = $("#text1").val();
+                    draw();
+                });
+
+                $("#text1").bind("keypress",function (event) {
+                    if(event.keyCode != 13) return;
+                    text = $("#text1").val();
+                    draw();
+                });
+
+                function getPointOnCanvas(canvas, e) {
+                    var rect = canvas.getBoundingClientRect();
+                    x = (e.clientX - rect.left) * canvas.width / rect.width;
+                    y = (e.clientY - rect.top ) * canvas.height / rect.height;
+                    return { x: x,  y: y};
+                }
+
+                var hammer = new Hammer(canvas);
+                var pre_center_pos;
+                var moveText = false;
+                hammer.on("panstart",function(e){
+                    isMouseDown = true;
+                    var pos = getPointOnCanvas(canvas,e.pointers[0]);
+                    pre_center_pos = {x:center_pos.x,y:center_pos.y};
+                    var flag = ctx.isPointInPath(pos.x,pos.y);
+                    if(flag){
+                        moveText = true;
+                        isMouseDown = false;
+                    }
+                });
+
+                hammer.on("panmove",function(e){
+                    var mousePos = getPointOnCanvas(canvas,e.pointers[0]); 
+                    if(moveText)
+                        textPos = mousePos;
+                    else if(isMouseDown){
+                        center_pos.x = e.deltaX+pre_center_pos.x;
+                        center_pos.y = e.deltaY+pre_center_pos.y;
+                    }
+                    if(isMouseDown || moveText)
+                        draw();
+                });
+
+                hammer.on("panend",function(e){
+                    moveText = false;
+                    isMouseDown = false;
+                });
+
+                var prescale;
+                hammer.get('pinch').set({
+                    enable: true
+                });
+                hammer.on("pinchstart",function(e){
+                    prescale = scale;
+                });
+                hammer.on("pinch",function(e){
+                    scale = e.scale*prescale;
+                    draw();
+                });
+
+                var predegree = degree;
+                var prerotatio;
+                hammer.get('rotate').set({
+                    enable: true
+                });
+                hammer.on('rotatestart',function(e){
+                    predegree = degree;
+                    prerotatio = e.rotation;
+                });
+                hammer.on('rotatemove',function(e){
+                    degree = (predegree+e.rotation-prerotatio)%360;
+                    draw();
+                });
+
+                hammer.on("doubletap",function(e){
+                    degree = 0;
+                    center_pos = {x:client_width/2,y:client_height/2};
+                    mousePrePos = {x:0,y:0};
+                    var width_ratio = width_phone/img.width;
+                    var height_ratio = height_phone/img.height;
+                    scale = width_ratio>height_ratio?height_ratio:width_ratio;
+                    draw();
+                });
+
+                hammer.on("tap",function(e){
+                    degree = 0;
+                    center_pos = {x:client_width/2,y:client_height/2};
+                    mousePrePos = {x:0,y:0};
+                    var width_ratio = width_phone/img.width;
+                    var height_ratio = height_phone/img.height;
+                    scale = width_ratio>height_ratio?height_ratio:width_ratio;
+                    draw();
+                });
+
+                function draw(){
+                    ctx.save();
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.translate(center_pos.x, center_pos.y);
+                    ctx.rotate(degree / 180 * Math.PI);
+                    ctx.translate(-center_pos.x, -center_pos.y);
+                    var width = img.width*scale;
+                    var height = img.height*scale;
+                    ctx.drawImage(img,center_pos.x-width/2,center_pos.y-height/2,width,height);
+                    ctx.restore();
+
+                    ctx.font = "18px bold 黑体";// 设置字体
+                    ctx.fillStyle = "#ff0000";// 设置颜色
+                    ctx.textAlign = "center";// 设置水平对齐方式
+                    ctx.textBaseline = "middle";// 设置垂直对齐方式
+                    var textSize = ctx.measureText(text);
+                    ctx.beginPath();
+                    ctx.fillText(text, textPos.x, textPos.y);
+                    ctx.save();
+                    ctx.translate(textPos.x,textPos.y);
+                    ctx.rect(-textSize.width/2,-40,textSize.width,80);
+                    ctx.restore();
+                    //ctx.stroke();
+                    ctx.closePath();
+                }
+            
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function width_input(){
+            var img = document.getElementById("img1");
+            img.width = form1.width.value*2;  
+        }
+
+        function height_input(){
+            var img = document.getElementById("img1");
+            img.height = form1.height.value*2;
+        }
+
+        function num(obj){
+            if(obj.value=='0.00'){
+                obj.value = '';
+            }
+            obj.value = obj.value.replace(/[^\d.]/g,"");
+            obj.value = obj.value.replace(/^\./g,"");
+            obj.value = obj.value.replace(/\.{2,}/g,".");
+            obj.value = obj.value.replace(".","$#$").replace(/\./g,"").replace("$#$",".");
+            obj.value = obj.value.replace(/^(\-)*(\d+)\.(\d\d).*$/,'$1$2.$3');
+        }
+
+        function selectSize(){
+            var select = document.getElementById("select");
+            var width = document.getElementById("width");
+            var height = document.getElementById("height");
+            console.log(select.selectedIndex);
+            if(select.selectedIndex == 0){
+               width.disabled = false; 
+               height.disabled = false; 
+            }else{
+                width.disabled = true;
+                height.disabled = true; 
+                switch(select.selectedIndex)
+                {
+                case 1:
+                    width.value = 100;
+                    height.value = 100;
+                    break;
+                case 2:
+                    width.value = 200;
+                    height.value = 200;
+                    break;
+                case 3:
+                    width.value = 300;
+                    height.value = 300;
+                    break;
+                case 4:
+                    width.value = 400;
+                    height.value = 400;
+                    break;
+                case 5:
+                    width.value = 500;
+                    height.value = 500;
+                    break;
+                case 6:
+                    width.value = 600;
+                    height.value = 600;
+                    break;
+                default:
+                    width.value = 100;
+                    height.value = 100;
+                    break;
+                }
+
+                var img = document.getElementById("img1");
+                img.width = width.value;
+                img.height = height.value;
+            }
+        }
+
+        function exportCanvasAsPNG(canvas, fileName) {
+            var MIME_TYPE = "image/png";
+            var imgURL = canvas.toDataURL(MIME_TYPE);
+            var dlLink = document.createElement('a');
+            dlLink.download = fileName;
+            dlLink.href = imgURL;
+            dlLink.dataset.downloadurl = [MIME_TYPE, dlLink.download, dlLink.href].join(':');
+            document.body.appendChild(dlLink);
+            dlLink.click();
+            document.body.removeChild(dlLink);
+        }
+
+        function submitClick(){
+            console.log("submitClick");
+            var canvas1 = document.getElementById('canvas1');
+            var ctx1 = canvas1.getContext("2d");
+            var canvas2 = document.getElementById('canvas2');
+            //ctx1.drawImage(canvas2,60,0,canvas2.width,canvas2.height);
+            var canvas3 = document.createElement('canvas');
+            canvas3.width = canvas1.width;
+            canvas3.height = canvas1.height;
+            var ctx3 = canvas3.getContext("2d");
+            ctx3.drawImage(canvas1,0,0,canvas1.width,canvas1.height);
+            ctx3.drawImage(canvas2,60,0,canvas2.width,canvas2.height);
+            //exportCanvasAsPNG(canvas3,"test.png");
+            var pic = canvas3.toDataURL("image/png");
+            $.ajax({
+            type:"POST",
+            url:"/photo/print",
+            data:{
+                width:125,
+                height:190,
+                image:pic
+                }
+            }).done(function(o){
+                console.log('saved');
+            });
+        }
+
+        function getTypes(){
+            $.ajax({
+                url:"/api/phone/classifylist",
+                type:'POST',
+                data:{},
+                crossDomain:true,
+                success: function(data) {
+                    var json = JSON.parse(data);
+                    var sel_types = document.getElementById("sel_types");
+                    for(var i=0;i<json.length;i++){
+                        if(json[i].eng.includes('Front Screen For Mobile Phone') == false)
+                            sel_types[sel_types.length] = new Option(json[i].eng,json[i].id);
+                    }
+                    getBrands();
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.log(textStatus + ' ' + errorThrown);
+                }
+            });
+        }
+
+        function getBrands(){
+            $.ajax({
+                url:"/api/phone/brandlist",
+                type:'POST',
+                data:{
+                    category_id:document.getElementById("sel_types").value
+                },
+                crossDomain:true,
+                success: function(data) {
+                    var json = JSON.parse(data);
+                    var sel_brands = document.getElementById("sel_brands");
+                    sel_brands.innerHTML = "";
+                    for(var i=0;i<json.length;i++){
+                        sel_brands[sel_brands.length] = new Option(json[i].eng,json[i].id);
+                    }
+                    getPhones();
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.log(textStatus + ' ' + errorThrown);
+                }
+            });
+        }
+
+        function getPhones(){
+            plt_arr = [];
+            $.ajax({
+                url:"/api/phone/serieslist",
+                type:'POST',
+                data:{
+                    category_id:document.getElementById("sel_types").value,
+                    brand_id:document.getElementById("sel_brands").value,
+                },
+                crossDomain:true,
+                success: function(data) {
+                    var json = JSON.parse(data);
+                    var sel_phones = document.getElementById("sel_phones");
+                    sel_phones.innerHTML = "";
+                    for(var i=0;i<json.length;i++){
+                        sel_phones[sel_phones.length] = new Option(json[i].eng,json[i].id);
+                    }
+                    getModels();
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.log(textStatus + ' ' + errorThrown);
+                }
+            });
+        }
+
+        function getModels(){
+            plt_arr = [];
+            $.ajax({
+                url:"/api/phone/modellist",
+                type:'POST',
+                data:{
+                    series_id:document.getElementById("sel_phones").value,
+                },
+                crossDomain:true,
+                success: function(data) {
+                    var json = JSON.parse(data);
+                    var sel_models = document.getElementById("sel_models");
+                    sel_models.innerHTML = "";
+                    for(var i=0;i<json.length;i++){
+                        sel_models[sel_models.length] = new Option(json[i].eng,json[i].cutimg);
+                        plt_arr.push(json[i].file);
+                    }
+                    plot_phone();
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.log(textStatus + ' ' + errorThrown);
+                }
+            });
+        }
+
+        window.onload = function(){
+            getTypes();
+            if((navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i)))  {
+                document.getElementById('divcode').style.display = "none";
+            } 
+            
+            var size = {width:119,height:185};    
+            var select_size_obj = document.getElementById('sel_print_size');
+            if(select_size_obj.selectedIndex == 1)
+                size = {width:125,height:200};
+            localStorage.setItem('print_size',JSON.stringify(size));
+        };
+
+        function extname(filename){
+            if(!filename||typeof filename!='string'){
+                return false
+            };
+            let a = filename.split('').reverse().join('');
+            let b = a.substring(0,a.search(/\./)).split('').reverse().join('');
+            return b
+        };
+
+        function decryptPlt(ciphertext,key){
+            var keyHex = CryptoJS.enc.Utf8.parse(key);
+            var decrypted = CryptoJS.DES.decrypt({
+                ciphertext: CryptoJS.enc.Hex.parse(ciphertext)
+            }, keyHex, {
+                iv:keyHex,
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7
+            });
+            var result_value = decrypted.toString(CryptoJS.enc.Utf8);
+            return result_value;
+        }
+
+        function plot_phone(){
+            var filename = document.getElementById("sel_models").value;
+            document.getElementById('cutimg').src = 'https://cloudcutter.oss-accelerate.aliyuncs.com/model/'+filename;//"https://cloudcutter.oss-accelerate.aliyuncs.com/model/"+filename;
+            var index = document.getElementById("sel_models").selectedIndex;
+            localStorage.setItem('fileName',plt_arr[index]);
+        }
+        
+        function select_type(){
+            getBrands();
+        }
+
+        function select_brand(){
+            getPhones();
+        }
+
+        function select_phone(){
+            getModels();
+        }
+
+        function select_model() {
+            plot_phone();
+        }
+
+        function select_size(){
+            var select_size_obj = document.getElementById('sel_print_size');
+            var size = {width:119,height:185};
+            if(select_size_obj.selectedIndex == 1)
+                size = {width:125,height:200};
+            localStorage.setItem('print_size',JSON.stringify(size));
+        }
+
+
+        function procLine(line){
+            var i = 0;
+            var signZ = 1;
+
+            while(line[i]<'0' || line[i]>'9'){
+                if(line[i] == 'U'){
+                    signZ = 0;
+                }
+                i++;
+            }
+            if(i == line.length)
+                return NaN;
+            line = line.substr(i,line.length-i);
+            var strs = line.split(',');
+            var axis_x = parseInt(strs[0]);
+            var axis_y = parseInt(strs[1]);
+            if(isNaN(axis_x) || isNaN(axis_y))
+                return NaN;
+            return {x:axis_x,y:axis_y,z:signZ};
+        }
+
+        function drawImg(img){
+            var canvas = document.getElementById('canvas1');
+            var context = canvas.getContext("2d");
+            context.clearRect(0,0,canvas.width,canvas.height);
+            context.fillStyle = "white";
+            context.fillRect(0,0,canvas.width,canvas.height);
+
+            var width_edge = 20;
+            var height_total = 190;
+            var width_total = 125;
+            var width_box = width_total-width_edge;
+            var height_box = height_total;
+            var const_ratio = 3;
+
+            context.beginPath();
+            context.rect(0,0,canvas.width,canvas.height);
+            context.stroke();
+            
+            var image = new Image();
+            image.src = img;
+            image.onload = function(){
+                // width_phone = image.width;
+                // height_phone = image.height;
+                // var sx = width_edge*const_ratio+width_box*const_ratio/2-image.width/2;
+                // var sy = height_box*const_ratio/2-image.height/2;
+                context.drawImage(image,0,0,width_total*const_ratio,height_total*const_ratio);
+
+                context.beginPath();
+                context.setLineDash([5]);
+                context.moveTo(width_edge*const_ratio,0);
+                context.lineTo(width_edge*const_ratio,width_edge*height_total);
+                context.stroke();
+                context.setLineDash([]);
+
+                context.beginPath();
+                context.moveTo(30,10);
+                context.lineTo(20,30);
+                context.lineTo(25,30);
+                context.lineTo(25,50);
+                context.lineTo(35,50);
+                context.lineTo(35,30);
+                context.lineTo(40,30);
+                context.lineTo(30,10);
+                context.fillStyle = 'black';
+                context.fill();
+                context.fillText('TOP',20,70);
+                context.stroke();
+                context.closePath();
+
+                context.beginPath();
+                context.moveTo(10,550);
+                context.lineTo(30,540);
+                context.lineTo(30,545);
+                context.lineTo(50,545);
+                context.lineTo(50,555);
+                context.lineTo(30,555);
+                context.lineTo(30,560);
+                context.lineTo(10,550);
+                context.fillStyle = 'black';
+                context.fill();
+                context.stroke();
+                context.closePath();
+
+            }
+        }
+
+        function drawPlt(pltstr){
+            var canvas = document.getElementById('canvas1');
+            var context = canvas.getContext("2d");
+            context.clearRect(0,0,canvas.width,canvas.height);
+            context.fillStyle = "white";
+            context.fillRect(0,0,canvas.width,canvas.height);
+            var width_edge = 20;
+            var height_total = 190;
+            var width_total = 125;
+            var width_box = width_total-width_edge;
+            var height_box = height_total;
+            var const_ratio = 3;
+            
+            var line = "";
+            var comma = 0;
+            var points = [];
+            for(var i=0;i<pltstr.length;i++)
+            {
+                var ch = pltstr[i];
+                if(ch == ';'){
+                    var point = procLine(line);
+                    if(point)
+                        points.push(point);
+                    line = "";
+                    comma = 0;
+                }else{
+                    line += pltstr[i];
+                    if(ch == ',' || ch==' '){
+                        comma++;
+                    }
+                    if(comma == 2) {
+                        var point = procLine(line);
+                        if(point)
+                            points.push(point);
+                        comma = 0;
+                        line = "";
+                    }
+                }
+            }
+
+            var max_x = points[0].x;
+            var max_y = points[0].y;
+            var min_x = points[0].x;
+            var min_y = points[0].y;
+            for(var i=0;i<points.length;i++){
+                if(points[i].x>max_x)
+                    max_x = points[i].x;
+                if(points[i].y>max_y)
+                    max_y = points[i].y;
+                if(points[i].x<min_x)
+                    min_x = points[i].x;
+                if(points[i].y<min_y)
+                    min_y = points[i].y;
+            }
+
+            var width = (max_x-min_x)/40;
+            var height = (max_y-min_y)/40;
+            width_phone = width*const_ratio;
+            height_phone = height*const_ratio;
+            context.save();
+            //context.translate(min_x*ratio/40,min_y*ratio/40);
+
+            context.beginPath();
+            context.rect(0,0,canvas.width,canvas.height);
+            context.stroke();
+
+            context.beginPath();
+            context.setLineDash([5]);
+            context.moveTo(width_edge*const_ratio,0);
+            context.lineTo(width_edge*const_ratio,width_edge*height_total);
+            context.stroke();
+
+            context.beginPath();
+            context.setLineDash([]);
+            var center_x = (width_edge+width_box/2)*const_ratio;
+            var center_y = width_box*const_ratio/2;
+            var offset_x = (width_box-width)*const_ratio/2;
+            var offset_y = (height_box-height)*const_ratio/2;
+            context.lineWidth = 1
+            for(var i=0;i<points.length;i++){
+                var x = (points[i].x-min_x)*const_ratio/40+offset_x;
+                var y = (points[i].y-min_y)*const_ratio/40+offset_y;
+                if(points[i].z)
+                    context.lineTo(width_total*const_ratio-Math.floor(x),Math.floor(y));
+                else
+                    context.moveTo(width_total*const_ratio-Math.floor(x),Math.floor(y));
+            }
+            context.stroke();
+            context.restore();
+        }
+    </script>
+</head>
+<body>
+<!-- <a href="/">返回Index页面</a> <br> -->
+<iframe  name="iframe" style="display:none;"> </iframe>
+<div style="display:flex;flex-direction: row;">
+    <div>
+        <form action="" enctype=multipart/form-data id='form1'  target="iframe" >
+		<div style="margin-bottom: 10px;">
+        	<label style="display:inline-block;width:100px;"> Film category: </label>
+        	<select name="sel_types" id="sel_types" style="width: 220px;height: 30px;margin: 5px;" onchange="select_type()"></select> <br>
+		</div>
+		<div style="margin-bottom: 10px;">
+        	<label style="display:inline-block;width:100px;"> Brand: </label>
+        	<select name="sel_brands" id="sel_brands" style="width: 220px;height: 30px;margin: 5px;" onchange="select_brand()"></select> <br>
+		</div>
+		<div style="margin-bottom: 10px;">
+        	<label style="display:inline-block;width:100px;"> Serier: </label>
+        	<select name="sel_phones" id="sel_phones" style="width: 220px;height: 30px;margin: 5px;" onchange="select_phone()"></select> <br>
+		</div>
+        <div style="margin-bottom: 10px;">
+        	<label style="display:inline-block;width:100px;"> Model: </label>
+        	<select name="sel_models" id="sel_models" style="width: 220px;height: 30px;margin: 5px;" onchange="select_model()"></select> <br>
+		</div>	
+		<div style="margin-bottom: 10px;">
+        	<label style="display:inline-block;width:100px;">Printing Size：</label>
+        	<select id='sel_print_size' style="width: 220px;height: 30px;margin: 5px;" onchange="select_size()">
+            	<option>119mm × 185mm</option>
+            	<option>200mm × 300mm</option>
+        	</select>
+		</div>
+		<script>$("#sel_types").select2()</script>
+        <script>$("#sel_brands").select2()</script>
+        <script>$("#sel_phones").select2()</script>
+        <script>$("#sel_models").select2()</script>
+        </form>
+        <img name="cutimg" id="cutimg" style='width: 120px;margin-left: 100px;margin-top: 10px;'/><br><br>
+    <a href="/photo/print_page" class="link" style="margin-left: 120px;">Customize Photo</a>
+    </div>
+    <div style="margin-left: 60px;" name='divcode' id="divcode">
+        <!-- <input id="print_url" type="text" value="http://{{ip}}:5000/photo/phone" style="width:400px" />
+        <button onclick="makePrintCode()" class='button'>生成打印二维码</button><br /> -->
+        <label>Open the page on the mobile</label><br>
+		<label>1 Make sure that the computer running the printer server maintain run state,and use fixed IP address</label><br>
+        <label>2 Please connect the phone to the right WIFI,make sure the phone and the printer server in the same network</label><br>
+        <label>3 Scan the QR code to open the page on the mobile browser</label><br>
+        <div id="print_qrcode" style="width:100px; height:100px; margin-top:15px;"></div> <br><br>
+        <script type="text/javascript">
+            var print_qrcode = new QRCode(document.getElementById("print_qrcode"), {
+                width : 100,
+                height : 100
+            });
+            
+            function makePrintCode (url) {		
+                print_qrcode.makeCode(url);
+            }
+            
+            makePrintCode("http://{{ip}}:5000/photo/phone");
+            
+            $("#print_url").
+                on("blur", function () {
+                    makePrintCode();
+                }).
+                on("keydown", function (e) {
+                    if (e.keyCode == 13) {
+                        makePrintCode();
+                    }
+                });
+            </script>
+    </div>
+</div>
+</body>
+
+
+
+
+
+
+
