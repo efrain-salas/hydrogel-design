@@ -1,0 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Licorice&family=Pushster&family=Roboto&family=Roboto+Slab&family=Russo+One&family=Vujahday+Script&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    font-family: 'Roboto', sans-serif;
+}
