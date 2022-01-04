@@ -10,6 +10,7 @@ class CatalogService
     protected function http(): PendingRequest
     {
         return Http::baseUrl('https://app.titanium-shield.com/api')
+            ->withoutVerifying()
             ->withHeaders([
                 'Authorization' => 'Bearer 221|TEI2DRlTON8zZsj1K43utzweafgH9yf9A40tvbZv',
             ]);
