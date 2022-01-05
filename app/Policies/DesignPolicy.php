@@ -30,7 +30,7 @@ class DesignPolicy
      */
     public function view(User $user, Design $design)
     {
-        return false;
+        return true;
     }
 
     /**

@@ -6,6 +6,7 @@ use App\Models\Design;
 use App\Models\User;
 use App\Services\CatalogService;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Livewire\Component;
 use Barryvdh\DomPDF\Facade as PDF;
 use Ramsey\Uuid\Uuid;
@@ -18,6 +19,7 @@ class Designer extends Component
     public ?int $productId = null;
 
     public bool $completed = false;
+    public ?int $designId = null;
 
     protected $listeners = [
         'frontendReady' => 'loadPlt',
@@ -94,19 +96,30 @@ class Designer extends Component
         $width = 11.9 * $cmInPixels;
         $height = 18.5 * $cmInPixels;
 
+        $uuid = Uuid::uuid4();
+
+        // PDF file
         $pdf = PDF::loadView('pdf.print', compact('image'))
             ->setPaper([0, 0, $width, $height])
             ->output();
 
-        $filePath = 'designs/' . Uuid::uuid4() . '.pdf';
+        $filePath = 'designs/' . $uuid . '.pdf';
         Storage::put($filePath, $pdf);
+
+        // PNG Thumbnail
+        $thumbnail = base64_decode(Str::after($image, ','));
+
+        $thumbnailPath = 'designs/' . $uuid . '.png';
+        Storage::put($thumbnailPath, $thumbnail);
 
         $design = new Design();
         $design->user()->associate($this->userId);
         $design->file = $filePath;
+        $design->thumbnail = $thumbnailPath;
         $design->save();
 
         $this->completed = true;
+        $this->designId = $design->id;
     }
 
     public function getEmojis(): array

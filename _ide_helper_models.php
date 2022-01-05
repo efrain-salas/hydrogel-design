@@ -17,6 +17,7 @@ namespace App\Models{
  * @property int $id
  * @property int $user_id
  * @property string $file
+ * @property string $thumbnail
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read string $download_url
@@ -27,6 +28,7 @@ namespace App\Models{
  * @method static \Illuminate\Database\Eloquent\Builder|Design whereCreatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Design whereFile($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Design whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Design whereThumbnail($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Design whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Design whereUserId($value)
  */

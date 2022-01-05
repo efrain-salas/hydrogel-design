@@ -4,10 +4,12 @@ namespace App\Nova;
 
 use App\Nova\Actions\DownloadDesignFile;
 use Illuminate\Http\Request;
+use Laravel\Nova\Fields\Avatar;
 use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\DateTime;
 use Laravel\Nova\Fields\File;
 use Laravel\Nova\Fields\ID;
+use Laravel\Nova\Fields\Image;
 use Laravel\Nova\Http\Requests\NovaRequest;
 
 class Design extends Resource
@@ -44,16 +46,18 @@ class Design extends Resource
     public function fields(Request $request)
     {
         return [
-            ID::make(__('ID'), 'id')->sortable(),
+            ID::make('Núm. Pedido', 'id')->sortable(),
+
+            Avatar::make('', 'thumbnail')
+                ->squared(),
 
             BelongsTo::make('Usuario', 'user', User::class)
-                ->showOnIndex(function () {
+                ->canSee(function () {
                     return $this->user->isAdmin();
                 }),
 
             DateTime::make('Fecha y Hora', 'created_at')
-                ->format('DD/MM/YYYY HH:mm')
-                ->onlyOnIndex(),
+                ->format('DD/MM/YYYY HH:mm'),
         ];
     }
 

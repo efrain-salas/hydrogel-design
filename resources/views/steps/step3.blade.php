@@ -2,6 +2,7 @@
     <div class="p-6">
         <div class="text-5xl">¡GRACIAS!</div>
         <div class="mt-2 text-2xl">Tu pedido se ha mandado a impresión.</div>
+        <div class="mt-2 text-2xl">Número de pedido: <strong>{{ $designId }}</strong></div>
 
         <div class="mt-4">
             <div wire:click="goHome" class="inline-block bg-red-500 hover:bg-yellow-300 px-3 py-1 rounded-lg font-black text-bold text-xl cursor-pointer">
