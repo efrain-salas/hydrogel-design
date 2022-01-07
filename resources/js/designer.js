@@ -51,7 +51,7 @@ window.frameLayer = new Konva.Layer();
 stage.add(frameLayer);
 
 window.userBackgroundLayer = new Konva.Layer({
-    //opacity: 0.8,
+    opacity: 0.8,
 });
 stage.add(userBackgroundLayer);
 
@@ -362,7 +362,7 @@ window.deleteSelected = () => {
 window.getStageAsDataUrl = () => {
     frame.hide();
     plt.hide();
-    //userBackgroundLayer.opacity(1);
+    userBackgroundLayer.opacity(1);
 
     const url = stage.toDataURL({
         pixelRatio: 4,
@@ -370,7 +370,7 @@ window.getStageAsDataUrl = () => {
 
     frame.show();
     plt.show();
-    //userBackgroundLayer.opacity(0.8);
+    userBackgroundLayer.opacity(0.8);
 
     return url;
 };
