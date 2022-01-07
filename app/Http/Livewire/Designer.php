@@ -26,6 +26,11 @@ class Designer extends Component
         'print' => 'sendToPrint',
     ];
 
+    protected $queryString = [
+        'subcategoryId',
+        'productId',
+    ];
+
     public function mount($userId)
     {
         $this->userId = $userId;
@@ -82,8 +87,10 @@ class Designer extends Component
     public function loadPlt()
     {
         if ($this->productId) {
+            $user = auth()->user();
+
             $plt = (new CatalogService())->getPltFile($this->productId);
-            $this->emit('pltFileReady', $plt);
+            $this->emit('pltFileReady', $plt, $user->print_top_offset, $user->print_horizontal_deviation);
         }
     }
 

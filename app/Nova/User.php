@@ -5,8 +5,10 @@ namespace App\Nova;
 use Illuminate\Http\Request;
 use Laravel\Nova\Fields\Gravatar;
 use Laravel\Nova\Fields\ID;
+use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Password;
 use Laravel\Nova\Fields\Text;
+use Laravel\Nova\Panel;
 
 class User extends Resource
 {
@@ -60,6 +62,14 @@ class User extends Resource
                 ->onlyOnForms()
                 ->creationRules('required', 'string', 'min:8')
                 ->updateRules('nullable', 'string', 'min:8'),
+
+            new Panel('Impresión', [
+                Number::make('Margen superior (en milímetros)', 'print_top_offset')
+                    ->hideFromIndex(),
+
+                Number::make('Desviación horizontal (en milímetros)', 'print_horizontal_deviation')
+                    ->hideFromIndex(),
+            ]),
         ];
     }
 

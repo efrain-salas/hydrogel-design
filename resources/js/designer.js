@@ -17,8 +17,8 @@ container.addEventListener('touchend', () => {
 });
 
 document.addEventListener('livewire:load', () => {
-    Livewire.on('pltFileReady', (plt) => {
-        drawPlt(plt);
+    Livewire.on('pltFileReady', (plt, topOffset, horizontalDeviation) => {
+        drawPlt(plt, topOffset, horizontalDeviation);
     });
 
     Livewire.emit('frontendReady');
@@ -34,6 +34,11 @@ document.addEventListener('alpine:init', () => {
 });
 
 // GLOBAL VARIABLES
+window.stageWidth = 1428 / 4;
+window.stageHeight = 2220 / 4;
+window.paperWidth = 119; // 119 mm
+window.paperHeight = 185; // 185 mm
+
 window.safeAreaX = null;
 window.safeAreaY = null;
 window.safeAreaWidth = null;
@@ -42,8 +47,8 @@ window.safeAreaHeight = null;
 // STAGE
 window.stage = new Konva.Stage({
     container: 'stage',
-    width: 1428 / 4,
-    height: 2220 / 4,
+    width: stageWidth,
+    height: stageHeight,
 });
 
 // LAYERS
@@ -505,7 +510,7 @@ window.procLine = (line) => {
     return {x:axis_x,y:axis_y,z:signZ};
 };
 
-window.drawPlt = (pltstr) => {
+window.drawPlt = (pltstr, topOffset, horizontalDeviation) => {
     const width_edge = 20;
     const width_total = 119;
     const height_total = 185;
@@ -619,18 +624,20 @@ window.drawPlt = (pltstr) => {
                 }
             }
 
-            let max_x = points[0].x;
-            let max_y = points[0].y;
-            let min_x = points[0].x;
-            let min_y = points[0].y;
+            let max_x = 0;
+            let max_y = 0;
+            let min_x = 999999;
+            let min_y = 999999;
             for (let i = 0; i < points.length; i++) {
-                if (points[i].x > max_x)
+                const cuttingPoint = points[i].z || ((i + 1 < points.length) && points[i+1].z);
+
+                if (points[i].x > max_x && cuttingPoint)
                     max_x = points[i].x;
-                if (points[i].y > max_y)
+                if (points[i].y > max_y && cuttingPoint)
                     max_y = points[i].y;
-                if (points[i].x < min_x)
+                if (points[i].x < min_x && cuttingPoint)
                     min_x = points[i].x;
-                if (points[i].y < min_y)
+                if (points[i].y < min_y && cuttingPoint)
                     min_y = points[i].y;
             }
 
@@ -643,11 +650,15 @@ window.drawPlt = (pltstr) => {
             context.setLineDash([]);
             const center_x = (width_edge + width_box / 2) * const_ratio;
             const center_y = height_box / 2 * const_ratio;
-            const offset_x = (width_box - width) / 2 * const_ratio;
-            const offset_y = (height_box - height) / 2 * const_ratio;
+            // const offset_x = (width_box - width) / 2 * const_ratio;
+            const offset_x = ((width_box - width) / 2 * const_ratio) - (horizontalDeviation * (stageWidth / paperWidth));
+            //const offset_y = (height_box - height) / 2 * const_ratio;
+            const offset_y = topOffset * (stageHeight / paperHeight);
+
             for (let i = 0; i < points.length; i++) {
                 const x = (points[i].x - min_x) / 40 * const_ratio + offset_x;
                 const y = (points[i].y - min_y) / 40 * const_ratio + offset_y;
+
                 if (points[i].z) {
                     const canvasX = width_total * const_ratio - Math.floor(x);
                     const canvasY = Math.floor(y);
