@@ -65,9 +65,12 @@ userBackgroundLayer.add(transformer);
 window.transformer = new Konva.Transformer();
 userForegroundLayer.add(transformer);
 
-//userLayer.draw();
-
 // FUNCTIONS
+window.changeBackgroundColor = () => {
+    const color = document.querySelector('input[type=color]').value;
+    background.fill(color);
+};
+
 window.addImage = (layer, url, x, y, width, height) => {
     width = width || safeAreaWidth;
     height = height || safeAreaHeight;
@@ -82,22 +85,16 @@ window.addImage = (layer, url, x, y, width, height) => {
             height: height,
             draggable: true,
         });
+
         imageShape.on('click tap', (e) => {
-            imageShape.moveToTop();
-            transformer.nodes([imageShape]);
-            transformer.enabledAnchors([
-                'top-left',
-                //'top-center',
-                'top-right',
-                //'middle-right',
-                //'middle-left',
-                'bottom-left',
-                //'bottom-center',
-                'bottom-right',
-            ]);
-            lastElementClickedAt = (new Date()).getTime();
             onNodeSelected(imageShape);
         });
+
+        imageShape.on('dragend transform', (e) => {
+            setTimeout(() => {
+                onNodeSelected(imageShape);
+            }, 10);
+        })
 
         layer.add(imageShape);
 
@@ -110,7 +107,8 @@ window.addEmoji = (url) => {
 };
 
 window.addUserImage = (layer) => {
-    const file = document.querySelector('input[type=file]').files[0];
+    const inputFile = document.querySelector('input[type=file]');
+    const file = inputFile.files[0];
     const reader = new FileReader();
 
     reader.addEventListener('load', () => {
@@ -122,6 +120,8 @@ window.addUserImage = (layer) => {
             const height = safeAreaWidth / aspectRatio;
 
             addImage(layer, reader.result, null, null, width, height);
+
+            inputFile.value = null;
         };
 
         img.src = reader.result;
@@ -166,19 +166,6 @@ window.addText = () => {
     });
 
     textNode.on('click tap', (e) => {
-        textNode.moveToTop();
-        transformer.nodes([textNode]);
-        transformer.enabledAnchors([
-            //'top-left',
-            //'top-center',
-            //'top-right',
-            'middle-right',
-            'middle-left',
-            //'bottom-left',
-            //'bottom-center',
-            //'bottom-right',
-        ]);
-        lastElementClickedAt = (new Date()).getTime();
         onNodeSelected(textNode);
     });
 
@@ -188,6 +175,12 @@ window.addText = () => {
             width: textNode.width() * textNode.scaleX(),
             scaleX: 1,
         });
+    });
+
+    textNode.on('dragend transform', () =>  {
+        setTimeout(() => {
+            onNodeSelected(textNode);
+        }, 10);
     });
 
     textNode.on('dblclick dbltap', () => {
@@ -402,7 +395,7 @@ window.onNodeAdded = () => {
 };
 
 window.onContainerClicked = () => {
-    if ((new Date()).getTime() - lastElementClickedAt > 500) {
+    if ((new Date()).getTime() - lastElementClickedAt > 100) {
         if (transformer) {
             transformer.nodes([]);
         }
@@ -431,6 +424,36 @@ window.onContainerClicked = () => {
 
 window.onNodeSelected = (node) => {
     selectedNode = node;
+
+    selectedNode.moveToTop();
+
+    transformer.nodes([selectedNode]);
+
+    if (node.getClassName() === 'Text') {
+        transformer.enabledAnchors([
+            //'top-left',
+            //'top-center',
+            //'top-right',
+            'middle-right',
+            'middle-left',
+            //'bottom-left',
+            //'bottom-center',
+            //'bottom-right',
+        ]);
+    } else {
+        transformer.enabledAnchors([
+            'top-left',
+            'top-center',
+            'top-right',
+            'middle-right',
+            'middle-left',
+            'bottom-left',
+            'bottom-center',
+            'bottom-right',
+        ]);
+    }
+
+    lastElementClickedAt = (new Date()).getTime();
 
     btDelete.classList.remove('hidden');
 
@@ -490,7 +513,7 @@ window.drawPlt = (pltstr) => {
     const height_box = height_total;
     const const_ratio = 3;
 
-    const background = new Konva.Rect({
+    window.background = new Konva.Rect({
         width: stage.width(),
         height: stage.height(),
         fill: 'white',
@@ -501,7 +524,6 @@ window.drawPlt = (pltstr) => {
         height: stage.height(),
         strokeWidth: 2,
         stroke: 'black',
-        fill: 'white',
     });
 
     const delimiter = new Konva.Shape({

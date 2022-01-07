@@ -1,25 +1,32 @@
-<div x-data="{ showEmojis: false }" x-show="$wire.productId && !$wire.completed">
+<div x-data="{ showEmojis: false }" x-show="$wire.productId && !$wire.completed" class="flex flex-col items-center">
     <div id="toolbar" class="px-2 pt-4 pb-1 select-none">
+        <div id="bt-show-back-colors" class="relative inline-block bg-red-700 hover:bg-red-600 px-2 py-0 rounded-lg font-regular text-white text-lg cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" class="inline align-middle h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+            </svg>
+            <span class="align-middle" style="font-size: 15px; margin-left: -3px;">Fondo</span>
+            <input onchange="changeBackgroundColor()" type="color" style="opacity: 0; position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden" />
+        </div>
         <div id="bt-add-image" class="relative inline-block bg-red-700 hover:bg-red-600 px-2 py-0 rounded-lg font-regular text-white text-lg cursor-pointer">
             <svg xmlns="http://www.w3.org/2000/svg" class="inline align-middle h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <span class="align-middle" style="font-size: 15px;">Foto</span>
+            <span class="align-middle" style="font-size: 15px; margin-left: -3px;">Foto</span>
             <input onchange="addUserBackgroundImage()" type="file" accept="image/png, image/jpeg" style="opacity: 0; position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden" />
         </div>
-        <div id="bt-show-emojis" @click="showEmojis = !showEmojis" class="inline-block bg-red-700 hover:bg-red-600 px-2 py-0 rounded-lg font-regular text-white text-lg cursor-pointer">
+        <div id="bt-show-emojis" @click="showEmojis = true" class="inline-block bg-red-700 hover:bg-red-600 px-2 py-0 rounded-lg font-regular text-white text-lg cursor-pointer">
             <svg xmlns="http://www.w3.org/2000/svg" class="inline align-middle h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span class="align-middle" style="font-size: 15px;">Emojis</span>
+            <span class="align-middle" style="font-size: 15px; margin-left: -3px;">Emoji</span>
         </div>
         <div id="bt-add-text" onclick="addText()" class="inline-block bg-red-700 hover:bg-red-600 px-2 py-0 rounded-lg font-regular text-white text-lg cursor-pointer">
             <svg xmlns="http://www.w3.org/2000/svg" class="inline align-middle h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <span class="align-middle" style="font-size: 15px;">Texto</span>
+            <span class="align-middle" style="font-size: 15px; margin-left: -3px;">Texto</span>
         </div>
-        <div id="bt-delete" onclick="deleteSelected()" class="hidden inline-block bg-red-700 hover:bg-red-600 px-2 py-0 rounded-lg font-regular text-white text-lg cursor-pointer">
+        <div id="bt-delete" onclick="deleteSelected()" class="hidden inline-block bg-gray-700 hover:bg-gray-600 px-2 py-0 rounded-lg font-regular text-white text-lg cursor-pointer">
             <svg xmlns="http://www.w3.org/2000/svg" class="inline align-middle h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
