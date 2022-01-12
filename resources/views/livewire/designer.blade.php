@@ -1,4 +1,10 @@
 <div x-data>
+    <div class="px-6 pb-4">
+        <div class="p-3 text-center font-extrabold bg-white text-2xl border rounded-b-xl uppercase shadow">
+            {{ $this->getShopName() }}
+        </div>
+    </div>
+
     <div>
         @include('steps.step1')
     </div>

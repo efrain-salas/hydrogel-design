@@ -56,6 +56,11 @@ class Designer extends Component
         $this->completed = false;
     }
 
+    public function getShopName(): string
+    {
+        return User::find($this->userId)->name;
+    }
+
     // STEP 1
 
     public function getProductCategories(): array
