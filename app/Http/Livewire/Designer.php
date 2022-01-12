@@ -87,7 +87,7 @@ class Designer extends Component
     public function loadPlt()
     {
         if ($this->productId) {
-            $user = auth()->user();
+            $user = User::find($this->userId);
 
             $plt = (new CatalogService())->getPltFile($this->productId);
             $this->emit('pltFileReady', $plt, $user->print_top_offset, $user->print_horizontal_deviation);
