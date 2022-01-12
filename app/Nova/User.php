@@ -58,6 +58,10 @@ class User extends Resource
                 ->creationRules('unique:users,email')
                 ->updateRules('unique:users,email,{{resourceId}}'),
 
+            Text::make('Link', function () {
+                return '<a href="' . route('designer', $this->id) . '">Link</a>';
+            })->asHtml(),
+
             Password::make('Contraseña', 'password')
                 ->onlyOnForms()
                 ->creationRules('required', 'string', 'min:8')

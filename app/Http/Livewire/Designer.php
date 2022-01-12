@@ -34,6 +34,7 @@ class Designer extends Component
     public function mount($userId)
     {
         $this->userId = $userId;
+        if (!User::where('id', $userId)->exists()) abort(401);
     }
 
     public function render()

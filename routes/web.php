@@ -13,4 +13,4 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/d/{userId}', \App\Http\Livewire\Designer::class);
+Route::get('/d/{userId}', \App\Http\Livewire\Designer::class)->name('designer');
