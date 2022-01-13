@@ -26,10 +26,10 @@ class Designer extends Component
         'print' => 'sendToPrint',
     ];
 
-    protected $queryString = [
+    /*protected $queryString = [
         'subcategoryId',
         'productId',
-    ];
+    ];*/
 
     public function mount($userId)
     {
