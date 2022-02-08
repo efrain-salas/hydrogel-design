@@ -1,4 +1,5 @@
 window.selectedNode = null;
+window.previousSelectedNode = null;
 window.lastElementClickedAt = (new Date()).getTime();
 window.container = document.getElementById('stage');
 window.btDelete = document.getElementById('bt-delete');
@@ -410,14 +411,17 @@ window.onContainerClicked = () => {
             selectedNode.show();
             transformer.show();
             transformer.forceUpdate();
+
+            textarea.parentNode.removeChild(textarea);
+            textarea = null;
         }
 
         selectedNode = null;
 
-        if (textarea) {
+        /*if (textarea) {
             textarea.parentNode.removeChild(textarea);
             textarea = null;
-        }
+        }*/
 
         btDelete.classList.add('hidden');
         selectFontFamilies.classList.add('hidden');
@@ -428,13 +432,24 @@ window.onContainerClicked = () => {
 };
 
 window.onNodeSelected = (node) => {
+    previousSelectedNode = selectedNode;
     selectedNode = node;
 
     selectedNode.moveToTop();
 
     transformer.nodes([selectedNode]);
 
-    if (node.getClassName() === 'Text') {
+    if (previousSelectedNode && textarea && previousSelectedNode.getClassName() === 'Text') {
+        previousSelectedNode.text(textarea.value);
+        previousSelectedNode.show();
+        transformer.show();
+        transformer.forceUpdate();
+
+        textarea.parentNode.removeChild(textarea);
+        textarea = null;
+    }
+
+    if (selectedNode.getClassName() === 'Text') {
         transformer.enabledAnchors([
             //'top-left',
             //'top-center',
@@ -462,7 +477,7 @@ window.onNodeSelected = (node) => {
 
     btDelete.classList.remove('hidden');
 
-    if (node.getClassName() === 'Text') {
+    if (selectedNode.getClassName() === 'Text') {
         selectFontFamilies.classList.remove('hidden');
         selectFontSizes.classList.remove('hidden');
         selectTextAlignments.classList.remove('hidden');
