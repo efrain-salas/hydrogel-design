@@ -359,6 +359,10 @@ window.deleteSelected = () => {
 };
 
 window.getStageAsDataUrl = () => {
+    if (transformer) {
+        transformer.nodes([]);
+    }
+
     frame.hide();
     plt.hide();
     userBackgroundLayer.opacity(1);
